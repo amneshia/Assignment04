@@ -19,6 +19,8 @@ X,y = fetch_olivetti_faces(return_X_y=True)
 X
 
 
+# **1. Use PCA preserving 99% of the variance to reduce the dataset’s dimensionality.**
+
 # In[3]:
 
 
@@ -31,17 +33,23 @@ X_pca = pca.fit_transform(X)
 # In[4]:
 
 
-from sklearn.mixture import GaussianMixture
-from sklearn.model_selection import train_test_split
+X_pca.shape
 
 
 # In[5]:
 
 
-n_classes = len(np.unique(y))
+from sklearn.mixture import GaussianMixture
+from sklearn.model_selection import train_test_split
 
 
 # In[6]:
+
+
+n_classes = len(np.unique(y))
+
+
+# In[7]:
 
 
 def makegm(cov_type, n_components): 
@@ -50,7 +58,9 @@ def makegm(cov_type, n_components):
     )
 
 
-# In[7]:
+# **2. Determine the most suitable covariance_type for the dataset. (And its plotting)**
+
+# In[8]:
 
 
 cmap = plt.cm.get_cmap('hsv', n_classes)
@@ -81,24 +91,22 @@ def make_ellipses(gmm):
         ax.set_aspect("equal", "datalim")
 
 
-# In[8]:
+# In[9]:
 
 
 covariance_types = ["spherical", "diag", "tied", "full"]
 
 
-# In[9]:
+# In[10]:
 
 
 # Break up the dataset into non-overlapping training (75%) and testing (25%) sets.
 X_train, X_test, y_train, y_test = train_test_split(X_pca,y,test_size=0.25,stratify=y)
 
-profiles = []
-for cov_type in covariance_types:
-    profiles.append({
+profiles = [{
         'gm' : makegm(cov_type, n_classes),
         'predictions': []
-    })
+    } for cov_type in covariance_types]
 
 for p in profiles:
     # Since we have class labels for the training data, we can
@@ -111,7 +119,7 @@ for p in profiles:
     p['predictions'] = estimator.predict(X_test)
 
 
-# In[10]:
+# In[11]:
 
 
 best_covariance_type = None
@@ -128,7 +136,7 @@ best_gm, best_score = best_covariance_type
 print(f'Best covariance type --> {best_gm.covariance_type} with score = {best_score}')
 
 
-# In[11]:
+# In[12]:
 
 
 for p in profiles:
@@ -150,13 +158,15 @@ for p in profiles:
     plt.show()    
 
 
-# In[12]:
+# **Determine the minimum number of clusters that best represent the dataset using either AIC or BIC. (And its plotting)**
+
+# In[13]:
 
 
 n_components_list = [2,3,4,5,6,7,8,9,10,15,20,30,40,50]
 
 
-# In[13]:
+# In[14]:
 
 
 profiles = [{'gms': [makegm(c,n) for n in n_components_list], 'best_n': 0} for c in covariance_types]
@@ -173,7 +183,7 @@ for p in profiles:
     
 
 
-# In[14]:
+# In[15]:
 
 
 for p in profiles:
@@ -184,31 +194,37 @@ for p in profiles:
     plt.show()
 
 
-# In[15]:
+# **5. Output the hard clustering for each instance.**
+# 
+# **6. Output the soft clustering for each instance.**
+
+# In[16]:
 
 
 for p in profiles:
     best_model = next(m for m in p['gms'] if m.n_components == p['best_n'])
-    print(f'Clusterings for covariance_type = {m.covariance_type}:')
+    print(f'Clusterings for covariance_type = {best_model.covariance_type}:')
     print(f'\nHard:\n{best_model.predict(X_pca)}')
     print(f'\nSoft:\n{best_model.predict_proba(X_pca)}')
     print()
 
 
-# In[16]:
+# **7. Use the model to generate some new faces (using the sample() method), and visualize them (use the inverse_transform() method to transform the data back to its original space based on the PCA method used)**
+
+# In[17]:
 
 
 X_new, y_new=best_gm.sample(50)
 pca.inverse_transform(X_new).shape
 
 
-# In[17]:
+# In[18]:
 
 
 faces_new = np.array([i.reshape(64,64) for i in pca.inverse_transform(X_new)])
 
 
-# In[18]:
+# In[19]:
 
 
 for img in faces_new[:10]:
@@ -216,7 +232,9 @@ for img in faces_new[:10]:
     plt.show()
 
 
-# In[19]:
+# **8. Modify some images (e.g., rotate, flip, darken)**
+
+# In[20]:
 
 
 from scipy import ndimage
@@ -239,7 +257,9 @@ for img in faces_new[:10]:
     plt.show()
 
 
-# In[20]:
+# **9. Determine if the model can detect the anomalies produced in (8) by comparing the output of the score_samples() method for normal images and for anomalies**
+
+# In[21]:
 
 
 #plotting of sampled unmodified faces
@@ -247,7 +267,7 @@ plt.scatter(X_new[:,0], X_new[:,1])
 plt.show()
 
 
-# In[21]:
+# In[22]:
 
 
 #scoring for sampled modified faces mixed with unmodified ones
